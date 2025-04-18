@@ -1,0 +1,81 @@
+cabal-version:       2.2
+
+name:                clock-breaking
+version:             0.1.0.0
+synopsis:            Implementation for ACM-ICPC World Finals 2016 Problem D: Clock Breaking
+homepage:            https://github.com/p-98/clock-breaking#readme
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              Timon Martins
+maintainer:          timon.martins03@gmail.com
+copyright:           © 2025 Timon Martins <timon.martins03@gmail.com>
+category:            coding-challenge
+build-type:          Simple
+extra-source-files:  README.md
+                     CHANGELOG.md
+
+-- To avoid duplicated efforts in documentation and dealing with the
+-- complications of embedding Haddock markup inside cabal files, it is
+-- common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/p-98/clock-breaking#readme>
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Lib
+  build-depends:       base >= 4.7 && < 5
+                     , cond
+                     , extra
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+
+executable clock-breaking-exe
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  build-depends:       base
+                     , clock-breaking
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+
+test-suite clock-breaking-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , clock-breaking
+                     , HUnit
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+
+source-repository head
+  type:     git
+  location: https://github.com/p-98/clock-breaking
