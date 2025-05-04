@@ -1,79 +1,33 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TupleSections #-}
 import Data.Functor ((<&>))
-import Data.List (intercalate)
+import Data.List (isPrefixOf, nub)
+import Data.Traversable (for)
+import Data.Tuple.Extra (uncurry3)
 import Lib (printDisplay, solveACM, Time(..), timeTo7Segments)
+import System.Directory
+import System.FilePath
 import Test.HUnit
 
 main :: IO ()
-main = runTestTTAndExit $ test
-  [ "solveACM" ~:
-    ["Official ACM Samples" ~:
-      [ sample1
-      , sample2
-      ]
+main = do
+  official <- officialInputOutputData
+  runTestTTAndExit $ test
+    [ "solveACM" ~: official
+    , digitTo7SegmentsAndPrintDisplay
     ]
-  , digitTo7SegmentsAndPrintDisplay
-  ]
 
-sample1 :: Test
-sample1 = "Sample 1" ~: output ~=? solveACM input
+officialInputOutputData :: IO Test
+officialInputOutputData = do
+  names <- nub . map dropExtension . filter notHidden <$> getDirectoryContents dir
+  ios
+    <- for names
+    $ \n -> (n,,) <$> readFile (dir </> n <.> "in") <*> readFile (dir </> n <.> "ans")
+  return $ "Official input/output data" ~: ios <&> uncurry3 mkTest
   where
-    input =
-      "3\n\
-      \......XX.....XX...XX.\n\
-      \.....X..X...X..X....X\n\
-      \.....X..X.X.X..X....X\n\
-      \.............XX...XX.\n\
-      \.....X..X......X.X..X\n\
-      \.....X..X......X.X..X\n\
-      \......XX.....XX...XX.\n\
-      \\n\
-      \......XX.....XX...XX.\n\
-      \.....X..X...X..X....X\n\
-      \.....X..X.X.X..X....X\n\
-      \.............XX...XX.\n\
-      \.....X..X......X.X..X\n\
-      \.....X..X......X.X..X\n\
-      \......XX.....XX...XX.\n\
-      \\n\
-      \.............XX...XX.\n\
-      \........X...X..X....X\n\
-      \........X.X.X..X....X\n\
-      \.............XX......\n\
-      \........X...X..X.X..X\n\
-      \........X...X..X.X..X\n\
-      \......XX.....XX...XX."
-    output =
-      ".??...WW.....??...??.\n\
-      \?..?.W..?...?..1.0..?\n\
-      \?..?.W..?.?.?..1.0..?\n\
-      \.??...??.....11...WW.\n\
-      \?..?.W..?.0.W..?.1..?\n\
-      \?..?.W..?...W..?.1..?\n\
-      \.??...11.....??...??."
-
-sample2 :: Test
-sample2 = "Sample 2" ~: output ~=? solveACM input
-  where
-    input =
-      "2\n\
-      \......XX.....XX...XX.\n\
-      \...X....X...X..X.X..X\n\
-      \...X....X.X.X..X.X..X\n\
-      \......XX..........XX.\n\
-      \...X.X....X.X..X.X..X\n\
-      \...X.X......X..X.X..X\n\
-      \......XX.....XX...XX.\n\
-      \\n\
-      \......XX.....XX......\n\
-      \...X....X...X..X.....\n\
-      \...X....X.X.X..X.....\n\
-      \......XX.............\n\
-      \...X.X....X.X..X.....\n\
-      \...X.X......X..X.....\n\
-      \......XX.....XX......"
-    output =
-      "impossible"
+    dir = "test/official-data/"
+    notHidden = not . isPrefixOf "."
+    mkTest name input output = name ~: output ~=? solveACM input
 
 digitTo7SegmentsAndPrintDisplay :: Test
 digitTo7SegmentsAndPrintDisplay
