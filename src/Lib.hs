@@ -66,7 +66,7 @@ series :: Time -> [Time]
 series = iterate nextTime
 
 nextTime :: Time -> Time
-nextTime (Time 23 5) = Time 00 00
+nextTime (Time 23 59) = Time 00 00
 nextTime (Time hs 59) = Time (hs + 1) 00
 nextTime (Time hs ms) = Time hs (ms + 1)
 
