@@ -122,7 +122,7 @@ parseTime s = error $ "Expected time, but got:\n" ++ show s
 -- * Printing
 
 printClockDiagnostic :: ClockDiagnostic -> String
-printClockDiagnostic Impossible = "impossible"
+printClockDiagnostic Impossible = "impossible\n"
 printClockDiagnostic (ClockDiagnostic d) = printDisplay printSegmentDiagnostic d
 
 printSegmentDiagnostic :: SegmentDiagnostic -> Char
@@ -142,7 +142,7 @@ printDisplay f d = f <$> d & \case {
     ,__,g1,g1,__,__,__,g2,g2,__,__,__  ,__,__,g3,g3,__,__,__,g4,g4,__,'\n'
     ,e1,__,__,c1,__,e2,__,__,c2,__,dot2,__,e3,__,__,c3,__,e4,__,__,c4,'\n'
     ,e1,__,__,c1,__,e2,__,__,c2,__,__  ,__,e3,__,__,c3,__,e4,__,__,c4,'\n'
-    ,__,d1,d1,__,__,__,d2,d2,__,__,__  ,__,__,d3,d3,__,__,__,d4,d4,__];
+    ,__,d1,d1,__,__,__,d2,d2,__,__,__  ,__,__,d3,d3,__,__,__,d4,d4,__,'\n'];
   _ -> error $ "Internal error: Expected display, but got " ++ show d
 }
  where
