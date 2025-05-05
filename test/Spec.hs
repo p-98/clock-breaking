@@ -5,9 +5,9 @@ import Data.List (isPrefixOf, nub)
 import Data.Traversable (for)
 import Data.Tuple.Extra (uncurry3)
 import Lib (printDisplay, solveACM, Time(..), timeTo7Segments)
-import System.Directory
-import System.FilePath
-import Test.HUnit
+import System.Directory (getDirectoryContents)
+import System.FilePath ((<.>), (</>), dropExtension)
+import Test.HUnit ((~:), (~=?), (~?=), runTestTTAndExit, test, Test)
 
 main :: IO ()
 main = do
