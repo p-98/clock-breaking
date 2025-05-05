@@ -14,7 +14,6 @@ import Control.Conditional (select)
 import Data.Function ((&))
 import Data.List (intersect, transpose, union)
 import Data.List.Extra (chunksOf)
--- import Debug.Trace
 
 -- * Entry Points
 
@@ -31,13 +30,11 @@ allConditions :: [SegmentCondition]
 allConditions = [Working, BurnIn, BurnOut]
 data SegmentDiagnostic = Unknown | Known SegmentCondition deriving (Show)
 type DisplayDiagnostic = [SegmentDiagnostic]
-
 data ClockDiagnostic = Impossible | ClockDiagnostic DisplayDiagnostic
 
 diagnoseClock :: [Display] -> ClockDiagnostic
 diagnoseClock displays
-  = id
-  $ select null (const Impossible) (ClockDiagnostic . map diagnoseSegment)
+  = select null (const Impossible) (ClockDiagnostic . map diagnoseSegment)
   $ foldr2d union []
   $ filter (all (not . null))
   $ map (foldr2d intersect allConditions . zipWith2d checkSegment displays)
