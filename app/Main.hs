@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Lib ()
+import Lib (solveACM)
 
 main :: IO ()
-main = putStrLn "Not implemented."
+main = putStrLn =<< solveACM <$> getContents
