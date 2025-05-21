@@ -6,7 +6,7 @@ in Haskell.
 
 # Usage
 
-_Note: A working installation of [stack](https://docs.haskellstack.org/) is required._
+_Note: A working installation of [`stack>=3.3.1`](https://docs.haskellstack.org/) is required._
 
 To run a single example, pass the input via stdin:
 ```shell
