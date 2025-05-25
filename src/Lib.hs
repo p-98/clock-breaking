@@ -18,56 +18,73 @@ import Data.List.Extra (chunksOf)
 -- * Entry Points
 
 solveACM :: String -> String
-solveACM = printClockDiagnostic . diagnoseClock . parseInput
+solveACM = printClockDiagnostic . compareAllTimeSeries . parseInput
 
 -- * Business Logic
 
 type Segment = Bool
-type Display = [Segment]
+type Display a = [a]
 
 data SegmentCondition = Working | BurnIn | BurnOut deriving (Show, Eq)
 allConditions :: [SegmentCondition]
 allConditions = [Working, BurnIn, BurnOut]
+type PossibleConditions = [SegmentCondition]
+
 data SegmentDiagnostic = Unknown | Known SegmentCondition deriving (Show)
-type DisplayDiagnostic = [SegmentDiagnostic]
-data ClockDiagnostic = Impossible | ClockDiagnostic DisplayDiagnostic
+data ClockDiagnostic = Impossible | ClockDiagnostic (Display SegmentDiagnostic)
 
-diagnoseClock :: [Display] -> ClockDiagnostic
-diagnoseClock displays
-  = select null (const Impossible) (ClockDiagnostic . map diagnoseSegment)
-  $ foldr2d union []
-  $ filter (all (not . null))
-  $ map (foldr2d intersect allConditions . zipWith2d checkSegment displays)
-  $ map timeTo7Segments . series <$> allTimes
+compareAllTimeSeries :: [Display Segment] -> ClockDiagnostic
+compareAllTimeSeries actual = do
+  let onlyPossible
+        = filter (not . any null)
+        $ map (compareTimeSeries actual)
+        $ allTimeSeries
+  if null onlyPossible
+    then Impossible
+    else ClockDiagnostic $ diagnoseClock $ foldr2d union [] onlyPossible
+
+diagnoseClock :: Display PossibleConditions -> Display SegmentDiagnostic
+diagnoseClock = map diagnoseSegment
+  where
+    diagnoseSegment [] = error "Internal error: Impossible segment should have been removed"
+    diagnoseSegment [cond] = Known cond
+    diagnoseSegment (_ : _ : _) = Unknown
+
+compareTimeSeries
+  :: {- actual -} [Display Segment] -> {- expected -} [Display Segment]
+  -> Display PossibleConditions
+compareTimeSeries
+  = foldr2d intersect allConditions
+  .: zipWith compareDisplay
 
 
--- | The possible conditions of a segment given an expected state
-checkSegment :: {- actual -} Segment -> {- expected -} Segment -> [SegmentCondition]
-checkSegment False False = [BurnOut, Working]
-checkSegment False True  = [BurnOut]
-checkSegment True  False = [BurnIn]
-checkSegment True  True  = [BurnIn, Working]
+-- | The possible conditions of segment within a display given an expected display
+compareDisplay
+  :: {- actual -} Display Segment -> {- expected -} Display Segment
+  -> Display PossibleConditions
+compareDisplay = zipWith compareSegment
+  where
+    compareSegment False False = [BurnOut, Working]
+    compareSegment False True  = [BurnOut]
+    compareSegment True  False = [BurnIn]
+    compareSegment True  True  = [BurnIn, Working]
 
-diagnoseSegment :: [SegmentCondition] -> SegmentDiagnostic
-diagnoseSegment [] = error "Internal error: Impossible segment should be removed"
-diagnoseSegment [cond] = Known cond
-diagnoseSegment (_ : _ : _) = Unknown
 
 data Time = Time { hours :: Int, minutes :: Int }
   deriving (Show)
 
-allTimes :: [Time]
-allTimes = [Time hours minutes | hours <- [0 .. 23], minutes <- [0 .. 59]]
+allTimeSeries :: [[Display Segment]]
+allTimeSeries = map2d timeTo7Segments $ map (iterate nextTime) $ allTimes
 
-series :: Time -> [Time]
-series = iterate nextTime
+allTimes :: [Time]
+allTimes = [Time hours minutes | hours <- [0 .. 23], minutes <- [0 .. 59]]
 
 nextTime :: Time -> Time
 nextTime (Time 23 59) = Time 00 00
 nextTime (Time hs 59) = Time (hs + 1) 00
 nextTime (Time hs ms) = Time hs (ms + 1)
 
-timeTo7Segments :: Time -> Display
+timeTo7Segments :: Time -> Display Segment
 timeTo7Segments Time{hours, minutes}
   = select (0 ==) (const $ replicate 7 False) digitTo7Segments (digit 1 hours)
   ++ digitTo7Segments (digit 0 hours)
@@ -90,7 +107,7 @@ digitTo7Segments d = error $ "Internal error: Expected digit, but got " ++ show 
 
 -- * Parsing
 
-parseInput :: String -> [Display]
+parseInput :: String -> [Display Segment]
 parseInput
   = fmap (parseTime . unlines)
   . chunksOf 7
@@ -98,7 +115,7 @@ parseInput
   . drop 1
   . lines
 
-parseTime :: String -> Display
+parseTime :: String -> Display Segment
 parseTime
   [_ ,a1,_ ,_ ,_ ,_ ,a2,_ ,_ ,_ ,_   ,_ ,_ ,a3,_ ,_ ,_ ,_ ,a4,_ ,_ ,'\n'
   ,f1,_ ,_ ,b1,_ ,f2,_ ,_ ,b2,_ ,_   ,_ ,f3,_ ,_ ,b3,_ ,f4,_ ,_ ,b4,'\n'
@@ -151,8 +168,11 @@ printDisplay f d = f <$> d & \case {
 digit :: Int -> Int -> Int
 digit d n = (n `div` (10 ^ d)) `mod` 10
 
-zipWith2d :: (a -> b -> c) -> [[a]] -> [[b]] -> [[c]]
-zipWith2d f = zipWith $ zipWith f
+(.:) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+(.:) = (.) . (.)
+
+map2d :: (a -> b) -> [[a]] -> [[b]]
+map2d f = map $ map f
 
 -- | fold along the second dimension
 foldr2d :: (a -> b -> b) -> b -> [[a]] -> [b]
