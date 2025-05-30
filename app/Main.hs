@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Lib (solveACM)
+import Lib (solveDemo)
 
 main :: IO ()
-main = putStrLn =<< solveACM <$> getContents
+main = putStrLn =<< solveDemo <$> getContents

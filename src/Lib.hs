@@ -1,24 +1,46 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BlockArguments #-}
+{-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags #-}
 module Lib
   ( -- * Public API
     solveACM
+  , solveDemo
     -- * Exported for tests only
   , printDisplay
   , Time(..)
   , timeTo7Segments
   ) where
 
-import Control.Conditional (select)
+import Control.Conditional (select, (??))
 import Data.Function ((&))
-import Data.List (intersect, transpose, union)
+import Data.List (intercalate, intersect, transpose, union)
 import Data.List.Extra (chunksOf)
 
 -- * Entry Points
 
 solveACM :: String -> String
 solveACM = printClockDiagnostic . compareAllTimeSeries . parseInput
+
+solveDemo :: String -> String
+solveDemo str = intercalate "\n"
+  [ "Input:"
+  , concatMap (box . printDisplay ("█" ?? " ") " ") input
+  , "Possible start times:"
+  , ( intercalate ", " . map (show) . possibleStartTimes) input ++ "\n"
+  , "Result:"
+  , (prettyClockDiagnostic . compareAllTimeSeries) input
+  ]
+  where
+    input = parseInput str
+    possibleStartTimes :: [Display Segment] -> [Time]
+    possibleStartTimes i
+      = filter
+        (not
+        . any null
+        . compareTimeSeries i
+        . map timeTo7Segments . iterate nextTime)
+      $ allTimes
 
 -- * Business Logic
 
@@ -71,7 +93,8 @@ compareDisplay = zipWith compareSegment
 
 
 data Time = Time { hours :: Int, minutes :: Int }
-  deriving (Show)
+instance Show Time where
+  show Time{hours, minutes} = show hours ++ ":" ++ show minutes
 
 allTimeSeries :: [[Display Segment]]
 allTimeSeries = map2d timeTo7Segments $ map (iterate nextTime) $ allTimes
@@ -134,35 +157,63 @@ parseTime
 parseTime s = error $ "Expected time, but got:\n" ++ show s
 
 -- * Printing
+--
+-- Functions in here come in `print...` and `pretty...` variants. The former
+-- output in the format specified in the problem definition. The latter is a
+-- more human-readable format.
 
+-- | Print clock diagnostic
 printClockDiagnostic :: ClockDiagnostic -> String
 printClockDiagnostic Impossible = "impossible\n"
-printClockDiagnostic (ClockDiagnostic d) = printDisplay printSegmentDiagnostic d
+printClockDiagnostic (ClockDiagnostic d)
+  = printDisplay printSegmentDiagnostic "." d
 
-printSegmentDiagnostic :: SegmentDiagnostic -> Char
-printSegmentDiagnostic Unknown = '?'
-printSegmentDiagnostic (Known Working) = 'W'
-printSegmentDiagnostic (Known BurnIn) = '1'
-printSegmentDiagnostic (Known BurnOut) = '0'
+printSegmentDiagnostic :: SegmentDiagnostic -> String
+printSegmentDiagnostic Unknown = "?"
+printSegmentDiagnostic (Known Working) = "W"
+printSegmentDiagnostic (Known BurnIn) = "1"
+printSegmentDiagnostic (Known BurnOut) = "0"
 
-printDisplay :: Show a => (a -> Char) -> [a] -> String
-printDisplay f d = f <$> d & \case {
+printDisplay :: Show a => (a -> String) -> String -> Display a -> String
+printDisplay f __ ds = f <$> ds & \case {
   [ a1, b1, c1, d1, e1, f1, g1, a2, b2, c2, d2, e2, f2, g2, dot1, dot2
   , a3, b3, c3, d3, e3, f3, g3, a4, b4, c4, d4, e4, f4, g4 ]
-  ->
-    [__,a1,a1,__,__,__,a2,a2,__,__,__  ,__,__,a3,a3,__,__,__,a4,a4,__,'\n'
-    ,f1,__,__,b1,__,f2,__,__,b2,__,__  ,__,f3,__,__,b3,__,f4,__,__,b4,'\n'
-    ,f1,__,__,b1,__,f2,__,__,b2,__,dot1,__,f3,__,__,b3,__,f4,__,__,b4,'\n'
-    ,__,g1,g1,__,__,__,g2,g2,__,__,__  ,__,__,g3,g3,__,__,__,g4,g4,__,'\n'
-    ,e1,__,__,c1,__,e2,__,__,c2,__,dot2,__,e3,__,__,c3,__,e4,__,__,c4,'\n'
-    ,e1,__,__,c1,__,e2,__,__,c2,__,__  ,__,e3,__,__,c3,__,e4,__,__,c4,'\n'
-    ,__,d1,d1,__,__,__,d2,d2,__,__,__  ,__,__,d3,d3,__,__,__,d4,d4,__,'\n'];
-  _ -> error $ "Internal error: Expected display, but got " ++ show d
+  -> concat
+    [__,a1,a1,__,__,__,a2,a2,__,__,__  ,__,__,a3,a3,__,__,__,a4,a4,__,"\n"
+    ,f1,__,__,b1,__,f2,__,__,b2,__,__  ,__,f3,__,__,b3,__,f4,__,__,b4,"\n"
+    ,f1,__,__,b1,__,f2,__,__,b2,__,dot1,__,f3,__,__,b3,__,f4,__,__,b4,"\n"
+    ,__,g1,g1,__,__,__,g2,g2,__,__,__  ,__,__,g3,g3,__,__,__,g4,g4,__,"\n"
+    ,e1,__,__,c1,__,e2,__,__,c2,__,dot2,__,e3,__,__,c3,__,e4,__,__,c4,"\n"
+    ,e1,__,__,c1,__,e2,__,__,c2,__,__  ,__,e3,__,__,c3,__,e4,__,__,c4,"\n"
+    ,__,d1,d1,__,__,__,d2,d2,__,__,__  ,__,__,d3,d3,__,__,__,d4,d4,__,"\n"];
+  _ -> error $ "Internal error: Expected display, but got " ++ show ds
 }
- where
-   __ = '.'
 
--- * General Purpose helpers
+prettyClockDiagnostic :: ClockDiagnostic -> String
+prettyClockDiagnostic Impossible = "impossible\n"
+prettyClockDiagnostic (ClockDiagnostic d)
+  = box $ printDisplay prettySegmentDiagnostic " " d
+
+prettySegmentDiagnostic :: SegmentDiagnostic -> String
+prettySegmentDiagnostic Unknown = "\x1b[43m?\x1b[m"
+prettySegmentDiagnostic (Known Working) = "\x1b[42m✓\x1b[m"
+prettySegmentDiagnostic (Known BurnIn) = "\x1b[41m1\x1b[m"
+prettySegmentDiagnostic (Known BurnOut) = "\x1b[41m0\x1b[m"
+
+box :: String -> String
+box str
+  = "╭" ++ replicate width '─' ++ "╮\n"
+  ++ mapLines (("│" ++) . (++ "│")) str
+  ++ "╰" ++ replicate width '─' ++ "╯\n"
+  where
+      width = ansiiLength $ takeWhile ('\n' /=) str
+      -- | length of a string taking ansii color codes into account
+      ansiiLength ('\x1b' : '[' : rest) = ansiiLength $ tail $ dropWhile ('m' /=) rest
+      ansiiLength (_ : rest) = 1 + ansiiLength rest
+      ansiiLength [] = 0
+      mapLines f = unlines . map f . lines
+
+-- * General Purpose Helpers
 
 -- | Nth lowest digit of an integer
 digit :: Int -> Int -> Int

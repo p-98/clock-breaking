@@ -61,6 +61,7 @@ test-suite clock-breaking-test
   main-is:             Spec.hs
   build-depends:       base
                      , clock-breaking
+                     , cond
                      , directory
                      , extra
                      , filepath
