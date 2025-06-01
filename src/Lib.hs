@@ -1,27 +1,43 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags #-}
 module Lib
   ( -- * Public API
     solveACM
   , solveDemo
     -- * Exported for tests only
+  , allTimes
+  , compareAllTimeSeries
+  , Display
+  , nextTime
   , printDisplay
+  , Segment
+  , SegmentCondition(..)
   , Time(..)
   , timeTo7Segments
   ) where
 
 import Control.Conditional (select, (??))
+import Control.DeepSeq (NFData)
 import Data.Function ((&))
 import Data.List (intercalate, intersect, transpose, union)
 import Data.List.Extra (chunksOf)
+import GHC.Generics (Generic)
+import System.Random (Finite, Uniform)
 
 -- * Entry Points
 
+-- | Entry point for solving the problem as specified by the ACM.
 solveACM :: String -> String
 solveACM = printClockDiagnostic . compareAllTimeSeries . parseInput
 
+-- | Entry point for solving the problem in a demo-scenario.
+--
+-- Input is expected in the form specified by the ACM, but output is in a more
+-- human-readable format with some additional information.
 solveDemo :: String -> String
 solveDemo str = intercalate "\n"
   [ "Input:"
@@ -47,14 +63,22 @@ solveDemo str = intercalate "\n"
 type Segment = Bool
 type Display a = [a]
 
-data SegmentCondition = Working | BurnIn | BurnOut deriving (Show, Eq)
+data SegmentCondition = Working | BurnIn | BurnOut
+  deriving (Show, Eq, Generic, NFData, Finite, Uniform)
 allConditions :: [SegmentCondition]
 allConditions = [Working, BurnIn, BurnOut]
 type PossibleConditions = [SegmentCondition]
 
-data SegmentDiagnostic = Unknown | Known SegmentCondition deriving (Show)
+data SegmentDiagnostic = Unknown | Known SegmentCondition
+  deriving (Show, Generic, NFData)
 data ClockDiagnostic = Impossible | ClockDiagnostic (Display SegmentDiagnostic)
+  deriving (Generic, NFData)
 
+-- | Compare the input against all time series and categorize every segments
+-- condition to be known or unknown.
+--
+-- If multiple time series are plausible, take the union of the possibilities.
+-- If no time series is plausible, the problem is impossible to solve.
 compareAllTimeSeries :: [Display Segment] -> ClockDiagnostic
 compareAllTimeSeries actual = do
   let onlyPossible
@@ -63,15 +87,18 @@ compareAllTimeSeries actual = do
         $ allTimeSeries
   if null onlyPossible
     then Impossible
-    else ClockDiagnostic $ diagnoseClock $ foldr2d union [] onlyPossible
+    else diagnoseClock $ foldr2d union [] onlyPossible
 
-diagnoseClock :: Display PossibleConditions -> Display SegmentDiagnostic
-diagnoseClock = map diagnoseSegment
+diagnoseClock :: Display PossibleConditions -> ClockDiagnostic
+diagnoseClock = ClockDiagnostic . map diagnoseSegment
   where
     diagnoseSegment [] = error "Internal error: Impossible segment should have been removed"
     diagnoseSegment [cond] = Known cond
     diagnoseSegment (_ : _ : _) = Unknown
 
+-- | Compare the input against a time series.
+--
+-- Calculate a the greatest set of possibilities matching all time steps.
 compareTimeSeries
   :: {- actual -} [Display Segment] -> {- expected -} [Display Segment]
   -> Display PossibleConditions
@@ -79,8 +106,7 @@ compareTimeSeries
   = foldr2d intersect allConditions
   .: zipWith compareDisplay
 
-
--- | The possible conditions of segment within a display given an expected display
+-- | Compare a single display from the input against a reference.
 compareDisplay
   :: {- actual -} Display Segment -> {- expected -} Display Segment
   -> Display PossibleConditions
@@ -99,6 +125,7 @@ instance Show Time where
 allTimeSeries :: [[Display Segment]]
 allTimeSeries = map2d timeTo7Segments $ map (iterate nextTime) $ allTimes
 
+-- | All times from 0:00 to 23:59.
 allTimes :: [Time]
 allTimes = [Time hours minutes | hours <- [0 .. 23], minutes <- [0 .. 59]]
 
@@ -115,6 +142,7 @@ timeTo7Segments Time{hours, minutes}
   ++ digitTo7Segments (digit 1 minutes)
   ++ digitTo7Segments (digit 0 minutes)
 
+-- | The correct 7-segment representation of a digit.
 digitTo7Segments :: Int -> [Segment]
 digitTo7Segments 0 = [True , True , True , True , True , True , False]
 digitTo7Segments 1 = [False, True , True , False, False, False, False]
